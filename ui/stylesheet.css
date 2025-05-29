@@ -11,7 +11,7 @@
 /* Animations */
 .prompt-library-popup {
     transition-property: opacity, transform;
-    transition-timing-function: ease-out;
+    transition-timing-function: ease-in-out;
 }
 
 /* Animation states */
