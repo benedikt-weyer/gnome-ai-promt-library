@@ -3,7 +3,7 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 
-import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -36,13 +36,13 @@ class AIPromptIndicator extends PanelMenu.Button {
     
     _createMenu() {
         // Quick access menu items
-        let recentItem = new PopupMenu.PopupMenuItem(_('Recent Prompts'));
+        let recentItem = new PopupMenu.PopupMenuItem('Recent Prompts');
         recentItem.connect('activate', () => {
             this._extension.showPromptWindow('recent');
         });
         this.menu.addMenuItem(recentItem);
         
-        let favoritesItem = new PopupMenu.PopupMenuItem(_('Favorites'));
+        let favoritesItem = new PopupMenu.PopupMenuItem('Favorites');
         favoritesItem.connect('activate', () => {
             this._extension.showPromptWindow('favorites');
         });
@@ -50,7 +50,7 @@ class AIPromptIndicator extends PanelMenu.Button {
         
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         
-        let libraryItem = new PopupMenu.PopupMenuItem(_('Open Library'));
+        let libraryItem = new PopupMenu.PopupMenuItem('Open Library');
         libraryItem.connect('activate', () => {
             this._extension.showPromptWindow();
         });
@@ -58,7 +58,7 @@ class AIPromptIndicator extends PanelMenu.Button {
         
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         
-        let prefsItem = new PopupMenu.PopupMenuItem(_('Preferences'));
+        let prefsItem = new PopupMenu.PopupMenuItem('Preferences');
         prefsItem.connect('activate', () => {
             this._extension.openPreferences();
         });
