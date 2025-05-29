@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ai-prompt-library" path="/org/gnome/shell/extensions/ai-prompt-library/">
+    
+    <!-- Keybindings -->
+    <key name="toggle-library-shortcut" type="as">
+      <default>["&lt;Super&gt;&lt;Shift&gt;p"]</default>
+      <summary>Toggle prompt library</summary>
+      <description>Keyboard shortcut to toggle the AI prompt library window</description>
+    </key>
+    
+    <key name="quick-copy-last-shortcut" type="as">
+      <default>["&lt;Super&gt;&lt;Shift&gt;l"]</default>
+      <summary>Quick copy last prompt</summary>
+      <description>Keyboard shortcut to copy the most recently used prompt</description>
+    </key>
+    
+    <!-- UI Preferences -->
+    <key name="window-width" type="i">
+      <default>800</default>
+      <range min="400" max="1600"/>
+      <summary>Window width</summary>
+      <description>Width of the prompt library window</description>
+    </key>
+    
+    <key name="window-height" type="i">
+      <default>600</default>
+      <range min="300" max="1200"/>
+      <summary>Window height</summary>
+      <description>Height of the prompt library window</description>
+    </key>
+    
+    <key name="prompt-card-layout" type="s">
+      <choices>
+        <choice value="grid"/>
+        <choice value="list"/>
+      </choices>
+      <default>"grid"</default>
+      <summary>Prompt card layout</summary>
+      <description>Layout style for prompt cards (grid or list)</description>
+    </key>
+    
+    <key name="cards-per-row" type="i">
+      <default>3</default>
+      <range min="1" max="6"/>
+      <summary>Cards per row</summary>
+      <description>Number of prompt cards per row in grid layout</description>
+    </key>
+    
+    <!-- Behavior -->
+    <key name="auto-close-on-copy" type="b">
+      <default>true</default>
+      <summary>Auto-close on copy</summary>
+      <description>Automatically close the library window after copying a prompt</description>
+    </key>
+    
+    <key name="show-notifications" type="b">
+      <default>true</default>
+      <summary>Show notifications</summary>
+      <description>Show notifications when prompts are copied or actions are performed</description>
+    </key>
+    
+    <key name="default-ai-model" type="s">
+      <choices>
+        <choice value="ChatGPT"/>
+        <choice value="Claude"/>
+        <choice value="Gemini"/>
+        <choice value="Other"/>
+      </choices>
+      <default>"ChatGPT"</default>
+      <summary>Default AI model</summary>
+      <description>Default AI model when creating new prompts</description>
+    </key>
+    
+    <key name="default-application" type="s">
+      <choices>
+        <choice value="Coding"/>
+        <choice value="Writing"/>
+        <choice value="Analysis"/>
+        <choice value="Creative"/>
+        <choice value="Business"/>
+        <choice value="Other"/>
+      </choices>
+      <default>"Coding"</default>
+      <summary>Default application</summary>
+      <description>Default application category when creating new prompts</description>
+    </key>
+    
+    <!-- Data Management -->
+    <key name="backup-frequency" type="i">
+      <default>7</default>
+      <range min="1" max="30"/>
+      <summary>Backup frequency (days)</summary>
+      <description>How often to create automatic backups of prompt data</description>
+    </key>
+    
+    <key name="max-recent-prompts" type="i">
+      <default>10</default>
+      <range min="5" max="50"/>
+      <summary>Maximum recent prompts</summary>
+      <description>Maximum number of recent prompts to keep track of</description>
+    </key>
+    
+    <key name="export-format" type="s">
+      <choices>
+        <choice value="json"/>
+        <choice value="csv"/>
+        <choice value="markdown"/>
+      </choices>
+      <default>"json"</default>
+      <summary>Default export format</summary>
+      <description>Default format for exporting prompt library data</description>
+    </key>
+    
+    <!-- Advanced -->
+    <key name="debug-mode" type="b">
+      <default>false</default>
+      <summary>Debug mode</summary>
+      <description>Enable debug logging and additional development features</description>
+    </key>
+    
+    <key name="enable-analytics" type="b">
+      <default>true</default>
+      <summary>Enable usage analytics</summary>
+      <description>Track prompt usage for analytics and recommendations</description>
+    </key>
+    
+  </schema>
+</schemalist> 

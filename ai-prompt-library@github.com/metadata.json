@@ -1,0 +1,9 @@
+{
+    "uuid": "ai-prompt-library@github.com",
+    "name": "AI Prompt Library",
+    "description": "A comprehensive cheat sheet for AI prompts with quick access and organization features",
+    "shell-version": ["45", "46", "47", "48"],
+    "url": "https://github.com/benedikt/ai-prompt-library",
+    "version": 1,
+    "settings-schema": "org.gnome.shell.extensions.ai-prompt-library"
+} 
