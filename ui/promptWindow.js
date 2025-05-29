@@ -293,6 +293,17 @@ class PromptWindow extends St.Widget {
         try {
             console.log('PromptWindow: Building complete UI');
             
+            // Get monitor dimensions and calculate 90% size
+            const monitor = Main.layoutManager.primaryMonitor;
+            const windowWidth = Math.floor(monitor.width * 0.9);
+            const windowHeight = Math.floor(monitor.height * 0.9);
+            
+            console.log(`PromptWindow: Calculated window size: ${windowWidth}x${windowHeight} (90% of ${monitor.width}x${monitor.height})`);
+            
+            // Store calculated dimensions for later use
+            this._windowWidth = windowWidth;
+            this._windowHeight = windowHeight;
+            
             // Create a background overlay
             const background = new St.Bin({
                 style_class: 'prompt-library-popup',
@@ -304,8 +315,8 @@ class PromptWindow extends St.Widget {
             const dialogBox = new St.BoxLayout({
                 style_class: 'prompt-library-background',
                 vertical: true,
-                width: this._settings.get_int('window-width'),
-                height: this._settings.get_int('window-height'),
+                width: windowWidth,
+                height: windowHeight,
             });
             
             // Build all the UI components
@@ -318,12 +329,10 @@ class PromptWindow extends St.Widget {
             
             // Center the dialog
             this.connect('notify::allocation', () => {
-                const monitor = Main.layoutManager.primaryMonitor;
-                const width = this._settings.get_int('window-width');
-                const height = this._settings.get_int('window-height');
+                const currentMonitor = Main.layoutManager.primaryMonitor;
                 this.set_position(
-                    Math.floor((monitor.width - width) / 2),
-                    Math.floor((monitor.height - height) / 2)
+                    Math.floor((currentMonitor.width - windowWidth) / 2),
+                    Math.floor((currentMonitor.height - windowHeight) / 2)
                 );
             });
             
@@ -495,6 +504,8 @@ class PromptWindow extends St.Widget {
             style_class: 'prompt-library-scroll',
             hscrollbar_policy: St.PolicyType.NEVER,
             vscrollbar_policy: St.PolicyType.AUTOMATIC,
+            x_expand: true,
+            y_expand: true,
         });
         
         this._promptsContainer = new St.BoxLayout({
@@ -739,6 +750,8 @@ class PromptWindow extends St.Widget {
     
     _displayPromptsGrid(cardsPerRow) {
         let currentRow = null;
+        const availableWidth = this._windowWidth - 220 - 48 - 24; // sidebar width - padding - margins
+        const cardWidth = Math.floor(availableWidth / cardsPerRow) - 16; // spacing between cards
         
         this._filteredPrompts.forEach((prompt, index) => {
             if (index % cardsPerRow === 0) {
@@ -749,7 +762,7 @@ class PromptWindow extends St.Widget {
             }
             
             const card = new PromptCard(prompt, this);
-            card.set_width(Math.floor(600 / cardsPerRow) - 10); // Approximate width
+            card.set_width(cardWidth);
             currentRow.add_child(card);
         });
     }
