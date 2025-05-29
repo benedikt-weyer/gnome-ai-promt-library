@@ -40,9 +40,9 @@ export class KeybindingManager {
             // Create a unique action name
             const actionName = `ai-prompt-library-${settingName}`;
             
-            // Add the keybinding
+            // Add the keybinding - use settingName for the settings key
             Main.wm.addKeybinding(
-                actionName,
+                settingName,
                 this._settings,
                 Meta.KeyBindingFlags.NONE,
                 Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
@@ -50,7 +50,7 @@ export class KeybindingManager {
             );
             
             // Store the binding for cleanup
-            this._keyBindings.set(settingName, actionName);
+            this._keyBindings.set(settingName, settingName);
             
             console.log(`Registered keybinding: ${accelerators[0]} for ${settingName}`);
             
@@ -143,7 +143,7 @@ export class KeybindingManager {
             // Remove old binding if it exists
             const oldActionName = this._keyBindings.get(settingName);
             if (oldActionName) {
-                Main.wm.removeKeybinding(oldActionName);
+                Main.wm.removeKeybinding(settingName);
                 this._keyBindings.delete(settingName);
             }
             
@@ -175,10 +175,10 @@ export class KeybindingManager {
             // Remove all registered keybindings
             for (const [settingName, actionName] of this._keyBindings) {
                 try {
-                    Main.wm.removeKeybinding(actionName);
-                    console.log(`Removed keybinding: ${actionName}`);
+                    Main.wm.removeKeybinding(settingName);
+                    console.log(`Removed keybinding: ${settingName}`);
                 } catch (error) {
-                    console.error(`Error removing keybinding ${actionName}:`, error);
+                    console.error(`Error removing keybinding ${settingName}:`, error);
                 }
             }
             
