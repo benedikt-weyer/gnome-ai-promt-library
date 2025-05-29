@@ -60,6 +60,35 @@
       <description>Show notifications when prompts are copied or actions are performed</description>
     </key>
     
+    <!-- Animation Settings -->
+    <key name="enable-animations" type="b">
+      <default>true</default>
+      <summary>Enable animations</summary>
+      <description>Enable show/hide animations for the prompt library window</description>
+    </key>
+    
+    <key name="animation-type" type="s">
+      <choices>
+        <choice value="fade"/>
+        <choice value="slide-down"/>
+        <choice value="slide-up"/>
+        <choice value="flip-down"/>
+        <choice value="flip-up"/>
+        <choice value="zoom"/>
+        <choice value="none"/>
+      </choices>
+      <default>"fade"</default>
+      <summary>Animation type</summary>
+      <description>Type of animation to use when showing/hiding the window</description>
+    </key>
+    
+    <key name="animation-duration" type="i">
+      <default>300</default>
+      <range min="100" max="1000"/>
+      <summary>Animation duration (ms)</summary>
+      <description>Duration of show/hide animations in milliseconds</description>
+    </key>
+    
     <key name="default-ai-model" type="s">
       <choices>
         <choice value="ChatGPT"/>

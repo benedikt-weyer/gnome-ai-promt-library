@@ -1,0 +1,124 @@
+/* Layout optimizations */
+.prompts-row {
+    spacing: 12px;
+    margin-bottom: 12px;
+}
+
+.prompts-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Animations */
+.prompt-library-popup {
+    transition-property: opacity, transform;
+    transition-timing-function: ease-out;
+}
+
+/* Animation states */
+.prompt-library-popup.animate-fade {
+    transition-property: opacity;
+}
+
+.prompt-library-popup.animate-fade.hidden {
+    opacity: 0;
+}
+
+.prompt-library-popup.animate-fade.visible {
+    opacity: 1;
+}
+
+.prompt-library-popup.animate-slide-down {
+    transition-property: opacity, transform;
+    transform-origin: top center;
+}
+
+.prompt-library-popup.animate-slide-down.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+}
+
+.prompt-library-popup.animate-slide-down.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.prompt-library-popup.animate-slide-up {
+    transition-property: opacity, transform;
+    transform-origin: bottom center;
+}
+
+.prompt-library-popup.animate-slide-up.hidden {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.prompt-library-popup.animate-slide-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.prompt-library-popup.animate-flip-down {
+    transition-property: opacity, transform;
+    transform-origin: top center;
+}
+
+.prompt-library-popup.animate-flip-down.hidden {
+    opacity: 0;
+    transform: rotateX(-90deg);
+}
+
+.prompt-library-popup.animate-flip-down.visible {
+    opacity: 1;
+    transform: rotateX(0deg);
+}
+
+.prompt-library-popup.animate-flip-up {
+    transition-property: opacity, transform;
+    transform-origin: bottom center;
+}
+
+.prompt-library-popup.animate-flip-up.hidden {
+    opacity: 0;
+    transform: rotateX(90deg);
+}
+
+.prompt-library-popup.animate-flip-up.visible {
+    opacity: 1;
+    transform: rotateX(0deg);
+}
+
+.prompt-library-popup.animate-zoom {
+    transition-property: opacity, transform;
+    transform-origin: center;
+}
+
+.prompt-library-popup.animate-zoom.hidden {
+    opacity: 0;
+    transform: scale(0.5);
+}
+
+.prompt-library-popup.animate-zoom.visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.prompt-library-popup.animate-none {
+    transition: none;
+}
+
+/* Animation timing */
+.prompt-library-popup.fast {
+    transition-duration: 150ms;
+}
+
+.prompt-library-popup.normal {
+    transition-duration: 300ms;
+}
+
+.prompt-library-popup.slow {
+    transition-duration: 500ms;
+}
+
+.prompt-library-popup.very-slow {
+    transition-duration: 800ms;
+} 

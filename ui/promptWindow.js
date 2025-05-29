@@ -269,6 +269,27 @@ class PromptWindow extends St.Widget {
             this._isOpening = false;
             this._visible = false;
             
+            // Animation state
+            this._isAnimating = false;
+            this._animationSettings = {
+                enabled: this._settings.get_boolean('enable-animations'),
+                type: this._settings.get_string('animation-type'),
+                duration: this._settings.get_int('animation-duration'),
+            };
+            
+            // Watch for animation settings changes
+            this._settings.connect('changed::enable-animations', () => {
+                this._animationSettings.enabled = this._settings.get_boolean('enable-animations');
+            });
+            this._settings.connect('changed::animation-type', () => {
+                this._animationSettings.type = this._settings.get_string('animation-type');
+                this._updateAnimationClasses();
+            });
+            this._settings.connect('changed::animation-duration', () => {
+                this._animationSettings.duration = this._settings.get_int('animation-duration');
+                this._updateAnimationClasses();
+            });
+            
             console.log('PromptWindow: Starting minimal UI build');
             this._buildMinimalUI();
             
@@ -327,13 +348,32 @@ class PromptWindow extends St.Widget {
             background.set_child(dialogBox);
             this.add_child(background);
             
-            // Center the dialog
+            // Set up initial animation state
+            this._setupAnimations();
+            
+            // Center the dialog after it's been allocated
             this.connect('notify::allocation', () => {
-                const currentMonitor = Main.layoutManager.primaryMonitor;
-                this.set_position(
-                    Math.floor((currentMonitor.width - windowWidth) / 2),
-                    Math.floor((currentMonitor.height - windowHeight) / 2)
-                );
+                if (this.get_stage() && this.is_visible()) {
+                    const currentMonitor = Main.layoutManager.primaryMonitor;
+                    this.set_position(
+                        Math.floor((currentMonitor.width - windowWidth) / 2),
+                        Math.floor((currentMonitor.height - windowHeight) / 2)
+                    );
+                }
+            });
+            
+            // Also position immediately when shown
+            this.connect('show', () => {
+                GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                    if (this.get_stage()) {
+                        const currentMonitor = Main.layoutManager.primaryMonitor;
+                        this.set_position(
+                            Math.floor((currentMonitor.width - windowWidth) / 2),
+                            Math.floor((currentMonitor.height - windowHeight) / 2)
+                        );
+                    }
+                    return false;
+                });
             });
             
             console.log('PromptWindow: Complete UI build completed');
@@ -570,6 +610,223 @@ class PromptWindow extends St.Widget {
         } catch (error) {
             console.error('PromptWindow: Error connecting signals:', error);
         }
+    }
+    
+    _setupAnimations() {
+        console.log('PromptWindow: Setting up animations');
+        
+        // Don't set initial hidden state during setup
+        // We'll set it just before animating
+    }
+    
+    _updateAnimationClasses() {
+        // This method is now only for updating timing if needed
+        // The actual animations are handled by Clutter
+    }
+    
+    _setInitialHiddenState() {
+        const type = this._animationSettings.type;
+        
+        console.log(`PromptWindow: Setting initial hidden state for ${type}`);
+        
+        // Reset any previous transforms first
+        this.set_pivot_point(0.5, 0.5);
+        this.rotation_angle_x = 0;
+        this.scale_x = 1.0;
+        this.scale_y = 1.0;
+        this.translation_y = 0;
+        
+        switch (type) {
+            case 'fade':
+                this.opacity = 0;
+                break;
+            case 'slide-down':
+                this.opacity = 0;
+                this.translation_y = -50;
+                break;
+            case 'slide-up':
+                this.opacity = 0;
+                this.translation_y = 50;
+                break;
+            case 'flip-down':
+                this.opacity = 0;
+                this.translation_y = -30;
+                break;
+            case 'flip-up':
+                this.opacity = 0;
+                this.translation_y = 30;
+                break;
+            case 'zoom':
+                this.opacity = 0;
+                break;
+        }
+    }
+    
+    _animateShow() {
+        if (!this._animationSettings.enabled || this._animationSettings.type === 'none') {
+            // No animation, show immediately
+            this.opacity = 255;
+            this._visible = true;
+            return Promise.resolve();
+        }
+        
+        return new Promise((resolve) => {
+            this._isAnimating = true;
+            const duration = this._animationSettings.duration;
+            const type = this._animationSettings.type;
+            
+            console.log(`PromptWindow: Starting ${type} show animation (${duration}ms)`);
+            
+            // Set initial hidden state just before animation
+            this._setInitialHiddenState();
+            
+            // Use a small delay to ensure the hidden state is applied
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                switch (type) {
+                    case 'fade':
+                        this.save_easing_state();
+                        this.set_easing_duration(duration);
+                        this.set_easing_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+                        this.opacity = 255;
+                        this.restore_easing_state();
+                        break;
+                        
+                    case 'slide-down':
+                        this.save_easing_state();
+                        this.set_easing_duration(duration);
+                        this.set_easing_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+                        this.opacity = 255;
+                        this.translation_y = 0;
+                        this.restore_easing_state();
+                        break;
+                        
+                    case 'slide-up':
+                        this.save_easing_state();
+                        this.set_easing_duration(duration);
+                        this.set_easing_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+                        this.opacity = 255;
+                        this.translation_y = 0;
+                        this.restore_easing_state();
+                        break;
+                        
+                    case 'flip-down':
+                        this.save_easing_state();
+                        this.set_easing_duration(duration);
+                        this.set_easing_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+                        this.opacity = 255;
+                        this.translation_y = 0;
+                        this.restore_easing_state();
+                        break;
+                        
+                    case 'flip-up':
+                        this.save_easing_state();
+                        this.set_easing_duration(duration);
+                        this.set_easing_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+                        this.opacity = 255;
+                        this.translation_y = 0;
+                        this.restore_easing_state();
+                        break;
+                        
+                    case 'zoom':
+                        this.save_easing_state();
+                        this.set_easing_duration(duration);
+                        this.set_easing_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+                        this.opacity = 255;
+                        this.restore_easing_state();
+                        break;
+                }
+                
+                // Wait for animation to complete
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, duration + 50, () => {
+                    this._isAnimating = false;
+                    this._visible = true;
+                    console.log(`PromptWindow: ${type} show animation completed`);
+                    resolve();
+                    return false;
+                });
+                
+                return false;
+            });
+        });
+    }
+    
+    _animateHide() {
+        if (!this._animationSettings.enabled || this._animationSettings.type === 'none') {
+            // No animation, hide immediately
+            this._visible = false;
+            return Promise.resolve();
+        }
+        
+        return new Promise((resolve) => {
+            this._isAnimating = true;
+            const duration = this._animationSettings.duration;
+            const type = this._animationSettings.type;
+            
+            console.log(`PromptWindow: Starting ${type} hide animation (${duration}ms)`);
+            
+            switch (type) {
+                case 'fade':
+                    this.save_easing_state();
+                    this.set_easing_duration(duration);
+                    this.set_easing_mode(Clutter.AnimationMode.EASE_IN_CUBIC);
+                    this.opacity = 0;
+                    this.restore_easing_state();
+                    break;
+                    
+                case 'slide-down':
+                    this.save_easing_state();
+                    this.set_easing_duration(duration);
+                    this.set_easing_mode(Clutter.AnimationMode.EASE_IN_CUBIC);
+                    this.opacity = 0;
+                    this.translation_y = -50;
+                    this.restore_easing_state();
+                    break;
+                    
+                case 'slide-up':
+                    this.save_easing_state();
+                    this.set_easing_duration(duration);
+                    this.set_easing_mode(Clutter.AnimationMode.EASE_IN_CUBIC);
+                    this.opacity = 0;
+                    this.translation_y = 50;
+                    this.restore_easing_state();
+                    break;
+                    
+                case 'flip-down':
+                    this.save_easing_state();
+                    this.set_easing_duration(duration);
+                    this.set_easing_mode(Clutter.AnimationMode.EASE_IN_CUBIC);
+                    this.opacity = 0;
+                    this.translation_y = -30;
+                    this.restore_easing_state();
+                    break;
+                    
+                case 'flip-up':
+                    this.save_easing_state();
+                    this.set_easing_duration(duration);
+                    this.set_easing_mode(Clutter.AnimationMode.EASE_IN_CUBIC);
+                    this.opacity = 0;
+                    this.translation_y = 30;
+                    this.restore_easing_state();
+                    break;
+                    
+                case 'zoom':
+                    this.save_easing_state();
+                    this.set_easing_duration(duration);
+                    this.set_easing_mode(Clutter.AnimationMode.EASE_IN_CUBIC);
+                    this.opacity = 0;
+                    this.restore_easing_state();
+                    break;
+            }
+            
+            // Wait for animation to complete
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, duration + 50, () => {
+                this._isAnimating = false;
+                this._visible = false;
+                console.log(`PromptWindow: ${type} hide animation completed`);
+                resolve();
+                return false;
+            });
+        });
     }
     
     _onKeyPress(event) {
@@ -809,8 +1066,8 @@ class PromptWindow extends St.Widget {
     // Public methods
     show(filter = null) {
         // Guard against recursive calls
-        if (this._isOpening) {
-            console.log('PromptWindow: Already opening, ignoring show() call');
+        if (this._isOpening || this._isAnimating) {
+            console.log('PromptWindow: Already opening/animating, ignoring show() call');
             return;
         }
         
@@ -819,19 +1076,30 @@ class PromptWindow extends St.Widget {
         
         try {
             console.log('PromptWindow: Making visible');
-            super.show(); // Use the proper Clutter show method
-            this._visible = true;
+            super.show(); // Make widget visible first
             
-            if (filter) {
-                console.log(`PromptWindow: Applying filter: ${filter}`);
-                this._filterPrompts(filter);
-            }
-            
-            // Focus search entry
-            console.log('PromptWindow: Focusing search entry');
-            if (this._searchEntry) {
-                this._searchEntry.grab_key_focus();
-            }
+            // Start animation
+            this._animateShow().then(() => {
+                console.log('PromptWindow: Show animation completed');
+                
+                if (filter) {
+                    console.log(`PromptWindow: Applying filter: ${filter}`);
+                    this._filterPrompts(filter);
+                }
+                
+                // Focus search entry after animation completes
+                GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                    try {
+                        console.log('PromptWindow: Focusing search entry');
+                        if (this._searchEntry && this.get_stage()) {
+                            this._searchEntry.grab_key_focus();
+                        }
+                    } catch (error) {
+                        console.error('PromptWindow: Error focusing search entry:', error);
+                    }
+                    return false; // Don't repeat
+                });
+            });
             
             console.log('PromptWindow: Show completed successfully');
         } catch (error) {
@@ -849,14 +1117,22 @@ class PromptWindow extends St.Widget {
     }
     
     hide() {
-        console.log('PromptWindow: Hiding popup');
-        this._isOpening = false;
-        super.hide(); // Use the proper Clutter hide method
-        this._visible = false;
-        this._extension._indicator?.setActive(false);
+        if (this._isAnimating) {
+            console.log('PromptWindow: Animation in progress, ignoring hide() call');
+            return;
+        }
         
-        // Mark as disposed in the extension so it gets recreated next time
-        this._extension._windowDisposed = true;
+        console.log('PromptWindow: Starting hide animation');
+        this._isOpening = false;
+        
+        this._animateHide().then(() => {
+            console.log('PromptWindow: Hide animation completed, hiding widget');
+            super.hide(); // Hide the widget after animation completes
+            this._extension._indicator?.setActive(false);
+            
+            // Mark as disposed in the extension so it gets recreated next time
+            this._extension._windowDisposed = true;
+        });
     }
     
     get visible() {

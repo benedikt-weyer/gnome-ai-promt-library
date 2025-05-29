@@ -99,6 +99,62 @@ export default class AIPromptLibraryPreferences extends ExtensionPreferences {
         settings.bind('show-notifications', notificationsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(notificationsRow);
         
+        // Animation group
+        const animationGroup = new Adw.PreferencesGroup({
+            title: _('Animations'),
+            description: _('Configure window show/hide animations'),
+        });
+        generalPage.add(animationGroup);
+        
+        const enableAnimationsRow = new Adw.SwitchRow({
+            title: _('Enable Animations'),
+            subtitle: _('Enable show/hide animations for the prompt library window'),
+        });
+        settings.bind('enable-animations', enableAnimationsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        animationGroup.add(enableAnimationsRow);
+        
+        const animationTypeRow = new Adw.ComboRow({
+            title: _('Animation Type'),
+            subtitle: _('Type of animation to use when showing/hiding the window'),
+        });
+        const animationTypeModel = new Gtk.StringList();
+        const animationTypes = [
+            { value: 'fade', label: _('Fade') },
+            { value: 'slide-down', label: _('Slide Down') },
+            { value: 'slide-up', label: _('Slide Up') },
+            { value: 'flip-down', label: _('Flip Down') },
+            { value: 'flip-up', label: _('Flip Up') },
+            { value: 'zoom', label: _('Zoom') },
+            { value: 'none', label: _('None') }
+        ];
+        animationTypes.forEach(type => animationTypeModel.append(type.label));
+        animationTypeRow.model = animationTypeModel;
+        
+        const currentAnimationType = settings.get_string('animation-type');
+        const typeIndex = animationTypes.findIndex(type => type.value === currentAnimationType);
+        animationTypeRow.selected = typeIndex >= 0 ? typeIndex : 0;
+        
+        animationTypeRow.connect('notify::selected', () => {
+            const selectedType = animationTypes[animationTypeRow.selected];
+            if (selectedType) {
+                settings.set_string('animation-type', selectedType.value);
+            }
+        });
+        animationGroup.add(animationTypeRow);
+        
+        const animationDurationRow = new Adw.SpinRow({
+            title: _('Animation Duration'),
+            subtitle: _('Duration of animations in milliseconds'),
+            adjustment: new Gtk.Adjustment({
+                lower: 100,
+                upper: 1000,
+                step_increment: 50,
+                page_increment: 100,
+            }),
+        });
+        settings.bind('animation-duration', animationDurationRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        animationGroup.add(animationDurationRow);
+        
         // Default values group
         const defaultsGroup = new Adw.PreferencesGroup({
             title: _('Defaults'),
