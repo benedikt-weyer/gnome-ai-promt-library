@@ -3,6 +3,7 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
@@ -1054,13 +1055,182 @@ class PromptWindow extends St.Widget {
     }
     
     _onImport() {
-        // TODO: Implement import dialog
         console.log('Import clicked');
+        
+        // For GNOME Shell extensions, we need to use a predefined import path
+        // since we can't show native file dialogs in the shell process
+        const homePath = GLib.get_home_dir();
+        const importPath = GLib.build_filenamev([homePath, 'prompt-library-import.json']);
+        
+        try {
+            const file = Gio.File.new_for_path(importPath);
+            
+            if (!file.query_exists(null)) {
+                this._showNotification(
+                    'Import File Not Found', 
+                    `Please place your export file at:\n${importPath}\n\nThen try importing again.`,
+                    'dialog-warning-symbolic'
+                );
+                return;
+            }
+            
+            const [success, contents] = file.load_contents(null);
+            if (!success) {
+                this._showNotification(
+                    'Import Failed', 
+                    'Could not read the import file.',
+                    'dialog-error-symbolic'
+                );
+                return;
+            }
+            
+            const decoder = new TextDecoder('utf-8');
+            const jsonData = decoder.decode(contents);
+            
+            const result = this._promptManager.importData(jsonData, 'skip');
+            
+            this._showNotification(
+                'Import Successful',
+                `Imported ${result.imported} prompts\nSkipped ${result.skipped} existing prompts`,
+                'dialog-information-symbolic'
+            );
+            
+            // Refresh the display
+            this._loadPrompts();
+            
+            // Delete the import file after successful import
+            file.delete(null);
+            
+        } catch (error) {
+            console.error('Import error:', error);
+            this._showNotification(
+                'Import Failed', 
+                `Error importing prompts: ${error.message}`,
+                'dialog-error-symbolic'
+            );
+        }
     }
     
     _onExport() {
-        // TODO: Implement export dialog
         console.log('Export clicked');
+        
+        try {
+            const format = this._settings.get_string('export-format');
+            const exportData = this._promptManager.exportData(format);
+            
+            // Copy to clipboard
+            this._clipboardManager.copyText(exportData, false);
+            
+            // Also save to file in home directory
+            const homePath = GLib.get_home_dir();
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const filename = `prompt-library-export-${timestamp}.${format}`;
+            const exportPath = GLib.build_filenamev([homePath, filename]);
+            
+            const file = Gio.File.new_for_path(exportPath);
+            file.replace_contents(exportData, null, false, Gio.FileCreateFlags.NONE, null);
+            
+            this._showNotification(
+                'Export Successful',
+                `Data exported to:\n${exportPath}\n\nAlso copied to clipboard.`,
+                'dialog-information-symbolic'
+            );
+            
+        } catch (error) {
+            console.error('Export error:', error);
+            this._showNotification(
+                'Export Failed', 
+                `Error exporting prompts: ${error.message}`,
+                'dialog-error-symbolic'
+            );
+        }
+    }
+    
+    _showNotification(title, message, iconName = 'dialog-information-symbolic') {
+        // Create a temporary notification overlay that appears above everything
+        const notification = new St.BoxLayout({
+            style_class: 'prompt-library-notification',
+            vertical: true,
+            reactive: true,
+        });
+        
+        const notificationBox = new St.BoxLayout({
+            style_class: 'prompt-library-notification-box',
+            reactive: true,
+        });
+        
+        // Add icon
+        const icon = new St.Icon({
+            icon_name: iconName,
+            icon_size: 24,
+            style_class: 'prompt-library-notification-icon',
+        });
+        notificationBox.add_child(icon);
+        
+        // Add content
+        const content = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+            style_class: 'prompt-library-notification-content',
+        });
+        
+        const titleLabel = new St.Label({
+            text: title,
+            style_class: 'prompt-library-notification-title',
+        });
+        content.add_child(titleLabel);
+        
+        const messageLabel = new St.Label({
+            text: message,
+            style_class: 'prompt-library-notification-message',
+        });
+        messageLabel.clutter_text.set_line_wrap(true);
+        content.add_child(messageLabel);
+        
+        notificationBox.add_child(content);
+        notification.add_child(notificationBox);
+        
+        // Add to main stage as chrome (highest layer)
+        Main.layoutManager.addChrome(notification, {
+            affectsStruts: false,
+            trackFullscreen: true,
+            affectsInputRegion: false
+        });
+        
+        // Position at top center
+        const monitor = Main.layoutManager.primaryMonitor;
+        notification.set_position(
+            Math.floor((monitor.width - 400) / 2),
+            50
+        );
+        notification.set_width(400);
+        
+        // Show with animation
+        notification.opacity = 0;
+        notification.save_easing_state();
+        notification.set_easing_duration(300);
+        notification.set_easing_mode(Clutter.AnimationMode.EASE_OUT_CUBIC);
+        notification.opacity = 255;
+        notification.restore_easing_state();
+        
+        console.log(`${title}: ${message}`);
+        
+        // Auto-hide after 4 seconds
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 4000, () => {
+            notification.save_easing_state();
+            notification.set_easing_duration(300);
+            notification.set_easing_mode(Clutter.AnimationMode.EASE_IN_CUBIC);
+            notification.opacity = 0;
+            notification.restore_easing_state();
+            
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+                Main.layoutManager.removeChrome(notification);
+                notification.destroy();
+                return false;
+            });
+            
+            return false;
+        });
     }
     
     _deletePrompt(promptId) {
