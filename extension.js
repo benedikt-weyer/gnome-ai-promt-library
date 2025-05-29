@@ -38,12 +38,16 @@ class AIPromptIndicator extends PanelMenu.Button {
         // Quick access menu items
         let recentItem = new PopupMenu.PopupMenuItem('Recent Prompts');
         recentItem.connect('activate', () => {
+            // Close menu first to prevent multiple activations
+            this.menu.close();
             this._extension.showPromptWindow('recent');
         });
         this.menu.addMenuItem(recentItem);
         
         let favoritesItem = new PopupMenu.PopupMenuItem('Favorites');
         favoritesItem.connect('activate', () => {
+            // Close menu first to prevent multiple activations
+            this.menu.close();
             this._extension.showPromptWindow('favorites');
         });
         this.menu.addMenuItem(favoritesItem);
@@ -52,6 +56,8 @@ class AIPromptIndicator extends PanelMenu.Button {
         
         let libraryItem = new PopupMenu.PopupMenuItem('Open Library');
         libraryItem.connect('activate', () => {
+            // Close menu first to prevent multiple activations
+            this.menu.close();
             this._extension.showPromptWindow();
         });
         this.menu.addMenuItem(libraryItem);
@@ -60,6 +66,8 @@ class AIPromptIndicator extends PanelMenu.Button {
         
         let prefsItem = new PopupMenu.PopupMenuItem('Preferences');
         prefsItem.connect('activate', () => {
+            // Close menu first to prevent multiple activations
+            this.menu.close();
             this._extension.openPreferences();
         });
         this.menu.addMenuItem(prefsItem);
@@ -67,8 +75,9 @@ class AIPromptIndicator extends PanelMenu.Button {
     
     _onButtonPressed(actor, event) {
         if (event.get_button() === 1) { // Left click
-            this._extension.togglePromptWindow();
-            return Clutter.EVENT_STOP;
+            // Let the menu system handle this normally
+            // Don't call togglePromptWindow here
+            return Clutter.EVENT_PROPAGATE;
         }
         return Clutter.EVENT_PROPAGATE;
     }
@@ -90,6 +99,7 @@ export default class AIPromptLibraryExtension extends Extension {
         this._promptManager = null;
         this._keybindingManager = null;
         this._settings = null;
+        this._windowDisposed = false; // Track disposal state internally
     }
     
     enable() {
@@ -129,11 +139,16 @@ export default class AIPromptLibraryExtension extends Extension {
             }
             
             // Hide and destroy prompt window
-            if (this._promptWindow) {
-                this._promptWindow.close();
-                this._promptWindow.destroy();
-                this._promptWindow = null;
+            if (this._promptWindow && !this._windowDisposed) {
+                try {
+                    this._promptWindow.close();
+                    this._promptWindow.destroy();
+                } catch (error) {
+                    console.error('Error destroying prompt window:', error);
+                }
             }
+            this._promptWindow = null;
+            this._windowDisposed = false;
             
             // Remove indicator from panel
             if (this._indicator) {
@@ -157,23 +172,65 @@ export default class AIPromptLibraryExtension extends Extension {
     }
     
     showPromptWindow(filter = null) {
-        if (this._promptWindow) {
-            this._promptWindow.show(filter);
-            this._indicator?.setActive(true);
+        // Check if the window needs to be recreated
+        if (!this._promptWindow || this._windowDisposed) {
+            console.log('Creating new PromptWindow instance');
+            this._promptWindow = new PromptWindow(this);
+            this._windowDisposed = false;
+        }
+        
+        // Use try/catch to handle any remaining disposal issues
+        try {
+            if (!this._promptWindow.visible && !this._promptWindow._isOpening) {
+                this._promptWindow.show(filter);
+                this._indicator?.setActive(true);
+            }
+        } catch (error) {
+            console.error('Error showing prompt window:', error);
+            // Force recreation on next call
+            this._windowDisposed = true;
+            this._promptWindow = null;
         }
     }
     
     hidePromptWindow() {
-        if (this._promptWindow) {
-            this._promptWindow.hide();
+        if (!this._promptWindow || this._windowDisposed) {
+            return;
+        }
+        
+        try {
+            if (this._promptWindow.visible) {
+                this._promptWindow.hide();
+                this._indicator?.setActive(false);
+            }
+        } catch (error) {
+            console.error('Error hiding prompt window:', error);
+            // Mark as disposed since we can't interact with it
+            this._windowDisposed = true;
             this._indicator?.setActive(false);
         }
     }
     
     togglePromptWindow() {
-        if (this._promptWindow?.visible) {
-            this.hidePromptWindow();
-        } else {
+        // Recreate window if it doesn't exist or has been disposed
+        if (!this._promptWindow || this._windowDisposed) {
+            this.showPromptWindow();
+            return;
+        }
+        
+        // Use try/catch to safely check window state
+        try {
+            // Check if the window is currently visible or in the process of opening
+            if (this._promptWindow.visible || this._promptWindow._isOpening) {
+                this.hidePromptWindow();
+            } else {
+                this.showPromptWindow();
+            }
+        } catch (error) {
+            console.error('Error in togglePromptWindow:', error);
+            // Force recreation on next call
+            this._windowDisposed = true;
+            this._promptWindow = null;
             this.showPromptWindow();
         }
     }

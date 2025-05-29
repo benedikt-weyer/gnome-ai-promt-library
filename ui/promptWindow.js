@@ -2,6 +2,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
+import GLib from 'gi://GLib';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
@@ -221,7 +222,7 @@ class PromptCard extends St.Button {
         // Auto-close if enabled
         const settings = this._promptWindow._extension.getExtensionSettings();
         if (settings.get_boolean('auto-close-on-copy')) {
-            this._promptWindow.close();
+            this._promptWindow.hide();
         }
     }
     
@@ -231,61 +232,109 @@ class PromptCard extends St.Button {
 });
 
 export const PromptWindow = GObject.registerClass(
-class PromptWindow extends ModalDialog.ModalDialog {
+class PromptWindow extends St.Widget {
     _init(extension) {
-        super._init({
-            styleClass: 'prompt-library-dialog',
-        });
+        console.log('PromptWindow: Starting initialization');
         
-        this._extension = extension;
-        this._settings = extension.getExtensionSettings();
-        this._promptManager = extension.getPromptManager();
-        this._clipboardManager = new ClipboardManager(extension);
-        
-        this._prompts = [];
-        this._filteredPrompts = [];
-        this._currentFilter = null;
-        this._searchQuery = '';
-        this._selectedFilters = {
-            aiModel: null,
-            application: null,
-            showFavorites: false,
-            showRecent: false,
-        };
-        
-        this._buildUI();
-        this._loadPrompts();
-        this._connectSignals();
+        try {
+            super._init({
+                style_class: 'prompt-library-popup',
+                layout_manager: new Clutter.BinLayout(),
+                reactive: true,
+                can_focus: true,
+                visible: false,
+            });
+            
+            console.log('PromptWindow: St.Widget initialized');
+            
+            this._extension = extension;
+            this._settings = extension.getExtensionSettings();
+            this._promptManager = extension.getPromptManager();
+            this._clipboardManager = new ClipboardManager(extension);
+            
+            console.log('PromptWindow: Dependencies initialized');
+            
+            this._prompts = [];
+            this._filteredPrompts = [];
+            this._currentFilter = null;
+            this._searchQuery = '';
+            this._selectedFilters = {
+                aiModel: null,
+                application: null,
+                showFavorites: false,
+                showRecent: false,
+            };
+            
+            // Add guard to prevent infinite recursion
+            this._isOpening = false;
+            this._visible = false;
+            
+            console.log('PromptWindow: Starting minimal UI build');
+            this._buildMinimalUI();
+            
+            console.log('PromptWindow: Starting data load');
+            this._loadPrompts();
+            
+            console.log('PromptWindow: Connecting signals');
+            this._connectSignals();
+            
+            // Add to main stage
+            Main.layoutManager.addChrome(this);
+            
+            console.log('PromptWindow: Initialization completed successfully');
+            
+        } catch (error) {
+            console.error('PromptWindow: Error during initialization:', error);
+            throw error;
+        }
     }
     
-    _buildUI() {
-        // Set window size
-        const width = this._settings.get_int('window-width');
-        const height = this._settings.get_int('window-height');
-        this.contentLayout.set_size(width, height);
-        
-        // Header
-        this._buildHeader();
-        
-        // Main content area
-        const contentBox = new St.BoxLayout({
-            vertical: false,
-            style_class: 'prompt-library-content',
-        });
-        
-        // Sidebar
-        this._buildSidebar(contentBox);
-        
-        // Main area
-        this._buildMainArea(contentBox);
-        
-        this.contentLayout.add_child(contentBox);
-        
-        // Footer
-        this._buildFooter();
+    _buildMinimalUI() {
+        try {
+            console.log('PromptWindow: Building complete UI');
+            
+            // Create a background overlay
+            const background = new St.Bin({
+                style_class: 'prompt-library-popup',
+                reactive: true,
+                can_focus: true,
+            });
+            
+            // Create the main dialog container
+            const dialogBox = new St.BoxLayout({
+                style_class: 'prompt-library-background',
+                vertical: true,
+                width: this._settings.get_int('window-width'),
+                height: this._settings.get_int('window-height'),
+            });
+            
+            // Build all the UI components
+            this._buildHeader(dialogBox);
+            this._buildMainContent(dialogBox);
+            this._buildFooter(dialogBox);
+            
+            background.set_child(dialogBox);
+            this.add_child(background);
+            
+            // Center the dialog
+            this.connect('notify::allocation', () => {
+                const monitor = Main.layoutManager.primaryMonitor;
+                const width = this._settings.get_int('window-width');
+                const height = this._settings.get_int('window-height');
+                this.set_position(
+                    Math.floor((monitor.width - width) / 2),
+                    Math.floor((monitor.height - height) / 2)
+                );
+            });
+            
+            console.log('PromptWindow: Complete UI build completed');
+        } catch (error) {
+            console.error('PromptWindow: Error building complete UI:', error);
+            throw error;
+        }
     }
     
-    _buildHeader() {
+    _buildHeader(parent) {
         const header = new St.BoxLayout({
             style_class: 'prompt-library-header',
         });
@@ -324,7 +373,22 @@ class PromptWindow extends ModalDialog.ModalDialog {
         actions.add_child(addButton);
         
         header.add_child(actions);
-        this.contentLayout.add_child(header);
+        parent.add_child(header);
+    }
+    
+    _buildMainContent(parent) {
+        const contentBox = new St.BoxLayout({
+            style_class: 'prompt-library-content',
+            vertical: false,
+        });
+        
+        // Sidebar
+        this._buildSidebar(contentBox);
+        
+        // Main area
+        this._buildMainArea(contentBox);
+        
+        parent.add_child(contentBox);
     }
     
     _buildSidebar(parent) {
@@ -438,13 +502,13 @@ class PromptWindow extends ModalDialog.ModalDialog {
             style_class: 'prompts-container',
         });
         
-        scrollView.add_actor(this._promptsContainer);
+        scrollView.set_child(this._promptsContainer);
         mainArea.add_child(scrollView);
         
         parent.add_child(mainArea);
     }
     
-    _buildFooter() {
+    _buildFooter(parent) {
         const footer = new St.BoxLayout({
             style_class: 'prompt-library-footer',
         });
@@ -475,18 +539,26 @@ class PromptWindow extends ModalDialog.ModalDialog {
         exportButton.connect('clicked', () => this._onExport());
         footer.add_child(exportButton);
         
-        this.contentLayout.add_child(footer);
+        parent.add_child(footer);
     }
     
     _connectSignals() {
-        // Search
-        this._searchEntry.clutter_text.connect('text-changed', () => {
-            this._searchQuery = this._searchEntry.get_text();
-            this._applyFilters();
-        });
-        
-        // Keyboard shortcuts
-        this.connect('key-press-event', (actor, event) => this._onKeyPress(event));
+        try {
+            console.log('PromptWindow: Connecting signals');
+            
+            // Search functionality
+            this._searchEntry.clutter_text.connect('text-changed', () => {
+                this._searchQuery = this._searchEntry.get_text();
+                this._applyFilters();
+            });
+            
+            // Keyboard shortcuts
+            this.connect('key-press-event', (actor, event) => this._onKeyPress(event));
+            
+            console.log('PromptWindow: Signals connected successfully');
+        } catch (error) {
+            console.error('PromptWindow: Error connecting signals:', error);
+        }
     }
     
     _onKeyPress(event) {
@@ -494,25 +566,31 @@ class PromptWindow extends ModalDialog.ModalDialog {
         
         switch (symbol) {
             case Clutter.KEY_Escape:
-                this.close();
+                this.hide();
                 return Clutter.EVENT_STOP;
-                
-            case Clutter.KEY_F:
-                if (event.get_state() & Clutter.ModifierType.CONTROL_MASK) {
-                    this._searchEntry.grab_key_focus();
-                    return Clutter.EVENT_STOP;
-                }
-                break;
         }
         
         return Clutter.EVENT_PROPAGATE;
     }
     
     _loadPrompts() {
-        this._prompts = this._promptManager.getAllPrompts();
-        this._updateFilters();
-        this._applyFilters();
-        this._updateStats();
+        try {
+            console.log('PromptWindow: Loading prompts');
+            this._prompts = this._promptManager.getAllPrompts();
+            console.log(`PromptWindow: Loaded ${this._prompts.length} prompts`);
+            this._filteredPrompts = this._prompts;
+            
+            // Update filters and display
+            this._updateFilters();
+            this._applyFilters();
+            this._updateStats();
+            
+            console.log('PromptWindow: Prompts loaded successfully');
+        } catch (error) {
+            console.error('PromptWindow: Error loading prompts:', error);
+            this._prompts = [];
+            this._filteredPrompts = [];
+        }
     }
     
     _updateFilters() {
@@ -652,6 +730,13 @@ class PromptWindow extends ModalDialog.ModalDialog {
         }
     }
     
+    _displayPromptsList() {
+        this._filteredPrompts.forEach(prompt => {
+            const card = new PromptCard(prompt, this);
+            this._promptsContainer.add_child(card);
+        });
+    }
+    
     _displayPromptsGrid(cardsPerRow) {
         let currentRow = null;
         
@@ -666,13 +751,6 @@ class PromptWindow extends ModalDialog.ModalDialog {
             const card = new PromptCard(prompt, this);
             card.set_width(Math.floor(600 / cardsPerRow) - 10); // Approximate width
             currentRow.add_child(card);
-        });
-    }
-    
-    _displayPromptsList() {
-        this._filteredPrompts.forEach(prompt => {
-            const card = new PromptCard(prompt, this);
-            this._promptsContainer.add_child(card);
         });
     }
     
@@ -717,21 +795,64 @@ class PromptWindow extends ModalDialog.ModalDialog {
     
     // Public methods
     show(filter = null) {
-        this.open();
-        
-        if (filter) {
-            this._filterPrompts(filter);
+        // Guard against recursive calls
+        if (this._isOpening) {
+            console.log('PromptWindow: Already opening, ignoring show() call');
+            return;
         }
         
-        // Focus search entry
-        this._searchEntry.grab_key_focus();
+        console.log('PromptWindow: Starting show() method');
+        this._isOpening = true;
+        
+        try {
+            console.log('PromptWindow: Making visible');
+            super.show(); // Use the proper Clutter show method
+            this._visible = true;
+            
+            if (filter) {
+                console.log(`PromptWindow: Applying filter: ${filter}`);
+                this._filterPrompts(filter);
+            }
+            
+            // Focus search entry
+            console.log('PromptWindow: Focusing search entry');
+            if (this._searchEntry) {
+                this._searchEntry.grab_key_focus();
+            }
+            
+            console.log('PromptWindow: Show completed successfully');
+        } catch (error) {
+            console.error('PromptWindow: Error in show():', error);
+            this._isOpening = false;
+            throw error;
+        } finally {
+            // Reset the flag after a short delay
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                this._isOpening = false;
+                console.log('PromptWindow: Reset _isOpening flag');
+                return false; // Don't repeat the timeout
+            });
+        }
     }
     
     hide() {
-        this.close();
+        console.log('PromptWindow: Hiding popup');
+        this._isOpening = false;
+        super.hide(); // Use the proper Clutter hide method
+        this._visible = false;
+        this._extension._indicator?.setActive(false);
+        
+        // Mark as disposed in the extension so it gets recreated next time
+        this._extension._windowDisposed = true;
+    }
+    
+    get visible() {
+        return this._visible; // Use internal tracking instead
     }
     
     destroy() {
+        console.log('PromptWindow: Destroying popup');
+        Main.layoutManager.removeChrome(this);
         this._clipboardManager.destroy();
         super.destroy();
     }
