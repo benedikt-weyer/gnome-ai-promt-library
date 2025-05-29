@@ -7,6 +7,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
 import {PromptWindow} from './ui/promptWindow.js';
 import {PromptManager} from './data/promptManager.js';
@@ -68,7 +69,20 @@ class AIPromptIndicator extends PanelMenu.Button {
         prefsItem.connect('activate', () => {
             // Close menu first to prevent multiple activations
             this.menu.close();
-            this._extension.openPreferences();
+            try {
+                // Use command line to open preferences - most reliable method
+                const uuid = this._extension.metadata.uuid;
+                Gio.Subprocess.new(['gnome-extensions', 'prefs', uuid], Gio.SubprocessFlags.NONE);
+            } catch (error) {
+                console.error('Error opening preferences:', error);
+                // Try alternative method with gnome-shell-extension-prefs
+                try {
+                    const uuid = this._extension.metadata.uuid;
+                    Gio.Subprocess.new(['gnome-shell-extension-prefs', uuid], Gio.SubprocessFlags.NONE);
+                } catch (fallbackError) {
+                    console.error('All methods to open preferences failed:', fallbackError);
+                }
+            }
         });
         this.menu.addMenuItem(prefsItem);
     }

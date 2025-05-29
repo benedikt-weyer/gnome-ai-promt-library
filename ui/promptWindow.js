@@ -354,11 +354,16 @@ class PromptWindow extends St.Widget {
             // Center the dialog after it's been allocated
             this.connect('notify::allocation', () => {
                 if (this.get_stage() && this.is_visible()) {
-                    const currentMonitor = Main.layoutManager.primaryMonitor;
-                    this.set_position(
-                        Math.floor((currentMonitor.width - windowWidth) / 2),
-                        Math.floor((currentMonitor.height - windowHeight) / 2)
-                    );
+                    GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                        if (this.get_stage()) {
+                            const currentMonitor = Main.layoutManager.primaryMonitor;
+                            this.set_position(
+                                Math.floor((currentMonitor.width - windowWidth) / 2),
+                                Math.floor((currentMonitor.height - windowHeight) / 2)
+                            );
+                        }
+                        return false;
+                    });
                 }
             });
             
